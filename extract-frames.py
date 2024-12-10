@@ -3,8 +3,6 @@ import cv2
 import os
 from tqdm import tqdm
 
-#TODO : Automatically create folder if it doesn't exist
-
 def extract_frames(video_path, output_dir, frame_per_second=1):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
