@@ -6,6 +6,8 @@ from tqdm import tqdm
 #TODO : Automatically create folder if it doesn't exist
 
 def extract_frames(video_path, output_dir, frame_per_second=1):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     video = cv2.VideoCapture(video_path)
     duration = video.get(cv2.CAP_PROP_FRAME_COUNT) // video.get(cv2.CAP_PROP_FPS)
 
@@ -16,6 +18,8 @@ def extract_frames(video_path, output_dir, frame_per_second=1):
         
 
 def preprocess_frames(frames_dir, output_dir):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     for frame in tqdm(os.listdir(frames_dir)):
         if frame.endswith(".jpg"):
             image = cv2.imread(f"{frames_dir}/{frame}")
