@@ -22,6 +22,7 @@ def preprocess_frames(frames_dir, output_dir):
         if frame.endswith(".jpg"):
             image = cv2.imread(f"{frames_dir}/{frame}")
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            # used to remove noise
             blur = cv2.GaussianBlur(gray, (0,0), sigmaX=2, sigmaY=2)
             cv2.imwrite(f"{output_dir}/{frame}", blur)    
     
