@@ -22,14 +22,12 @@ def preprocess_frames(frames_dir, output_dir):
         if frame.endswith(".jpg"):
             image = cv2.imread(f"{frames_dir}/{frame}")
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            blur = cv2.GaussianBlur(gray, (3,3), sigmaX=0, sigmaY=0)
-            # cv2.imwrite(f"{output_dir}/{frame}", blur)
             cv2.imwrite(f"{output_dir}/{frame}", gray)        
     
         
 if __name__ == "__main__":
     print("\nExtracting frames...\n")
-    extract_frames("test2.mov", "frames", 15)
+    extract_frames("video.mov", "frames", 15)
     print("\n\nPreprocessing frames...\n")
     preprocess_frames("frames", "preprocessed-frames")
     
