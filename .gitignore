@@ -170,7 +170,4 @@ motion-detection-frames
 *.avi
 *.mp4
 bg-detection-frames
-hog
-hog-imutils
-preprocessed-frames-no-gaussian
-prev_test
+test
