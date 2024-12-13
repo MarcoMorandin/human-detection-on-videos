@@ -37,3 +37,4 @@ tornado==6.4.2
 tqdm==4.67.1
 traitlets==5.14.3
 wcwidth==0.2.13
+imutils==0.5.4

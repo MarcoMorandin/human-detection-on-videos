@@ -25,11 +25,25 @@ def preprocess_frames(frames_dir, output_dir):
             # used to remove noise
             blur = cv2.GaussianBlur(gray, (0,0), sigmaX=2, sigmaY=2)
             cv2.imwrite(f"{output_dir}/{frame}", blur)    
-    
-        
+
+
+def preprocess_frames_no_gaussian(frames_dir, output_dir):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    for frame in tqdm(os.listdir(frames_dir)):
+        if frame.endswith(".jpg"):
+            image = cv2.imread(f"{frames_dir}/{frame}")
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            # used to remove noise
+            #blur = cv2.GaussianBlur(gray, (0,0), sigmaX=2, sigmaY=2)
+            cv2.imwrite(f"{output_dir}/{frame}", gray)  
+
+
 if __name__ == "__main__":
     print("\nExtracting frames...\n")
-    extract_frames("video.mov", "frames", 15)
+    extract_frames("video_2.mov", "frames", 15)
     print("\n\nPreprocessing frames...\n")
-    preprocess_frames("frames", "preprocessed-frames")
+    #preprocess_frames("frames", "preprocessed-frames")
+    preprocess_frames_no_gaussian("frames", "preprocessed-frames-no-gaussian")
+
     
