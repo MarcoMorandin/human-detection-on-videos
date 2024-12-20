@@ -40,7 +40,6 @@ def get_bounding_boxes(large_contours):
     return bounding_boxes
 
 
-#IDEA! SCALARE IL VIDEO CON FORMATO STANDARD COSì SI PUò DEFINIRE DIMENSIONE PERSONE
 def main(frames_dir, output_video):
     ref_frame_bg = load_grayscale_image(f"{frames_dir}/frame0.jpg")
     ref_frame_bg = cv2.resize(ref_frame_bg, (1366, 768) , interpolation= cv2.INTER_LINEAR)
