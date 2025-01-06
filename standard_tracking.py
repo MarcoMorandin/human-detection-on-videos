@@ -20,7 +20,15 @@ def initialize_video_writer(output_path, fps, frame_size):
     fourcc = cv2.VideoWriter_fourcc(*"MJPG")
     return cv2.VideoWriter(output_path, fourcc, fps, frame_size)
 
-def compute_flow(frame1_path, frame2_path):
+def compute_flow(frame1_path, frame2_path,                          #in origine
+                 pyr_scale=0.5,    # recommended range: [0.3, 0.6]  0.75
+                 levels=4,        # recommended range: [3, 6]       3
+                 winsize=15,      # recommended range: [5, 21]      5
+                 iterations=3,    # recommended range: [3, 10]      3
+                 poly_n=7,        # recommended range: [5, 7]       10
+                 poly_sigma=1.5,  # recommended range: [1.1, 1.5]   1.2
+                 flow_flags=0):
+
     # convert to grayscale
     gray1=load_grayscale_image(frame1_path)
     gray2=load_grayscale_image(frame2_path)
@@ -28,21 +36,22 @@ def compute_flow(frame1_path, frame2_path):
     #gray1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
     #gray2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
 
-    gray1 = cv2.resize(gray1, (1366, 768) , interpolation= cv2.INTER_LINEAR)
-    gray2 = cv2.resize(gray2, (1366, 768) , interpolation= cv2.INTER_LINEAR)
+    gray1 = cv2.resize(gray1, (512, 480) , interpolation= cv2.INTER_LINEAR)
+    gray2 = cv2.resize(gray2, (512, 480) , interpolation= cv2.INTER_LINEAR)
 
     # blurr image
     gray1 = cv2.GaussianBlur(gray1, dst=None, ksize=(3,3), sigmaX=5)
     gray2 = cv2.GaussianBlur(gray2, dst=None, ksize=(3,3), sigmaX=5)
-
-    flow = cv2.calcOpticalFlowFarneback(gray1, gray2, None,
-                                        pyr_scale=0.75,
-                                        levels=3,
-                                        winsize=5,
-                                        iterations=3,
-                                        poly_n=10,
-                                        poly_sigma=1.2,
-                                        flags=0)
+    flow = cv2.calcOpticalFlowFarneback(
+            gray1, gray2, None,
+            pyr_scale=pyr_scale,
+            levels=levels,
+            winsize=winsize,
+            iterations=iterations,
+            poly_n=poly_n,
+            poly_sigma=poly_sigma,
+            flags=flow_flags
+        )
     return flow
 
 def get_flow_viz(flow):
@@ -59,7 +68,7 @@ def get_flow_viz(flow):
     return rgb
 
 
-def get_motion_mask(flow_mag, motion_thresh=1, kernel=np.ones((7,7))):
+def get_motion_mask(flow_mag, motion_thresh=1, kernel=np.ones((5,5), np.uint8)):
     """ Obtains Detection Mask from Optical Flow Magnitude
         Inputs:
             flow_mag (array) Optical Flow magnitude
@@ -164,8 +173,8 @@ def main_with_optical_flow(frames_dir, output_video, resize_height, reseize_widt
 if __name__ == "__main__":
     output_video = "human-detection-optical-flow.avi"
     frames_dir="frames"
-    hight=768
-    width=1366
+    hight=480
+    width=512
     main_with_optical_flow(frames_dir, output_video, hight, width)
 
 

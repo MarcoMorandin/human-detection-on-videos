@@ -35,8 +35,8 @@ def compute_flow(frame1_path, frame2_path,                          #in origine
     #gray1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
     #gray2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
 
-    gray1 = cv2.resize(gray1, (1366, 768) , interpolation= cv2.INTER_LINEAR)
-    gray2 = cv2.resize(gray2, (1366, 768) , interpolation= cv2.INTER_LINEAR)
+    gray1 = cv2.resize(gray1, (512, 480) , interpolation= cv2.INTER_LINEAR)
+    gray2 = cv2.resize(gray2, (512, 480) , interpolation= cv2.INTER_LINEAR)
 
     # blurr image
     gray1 = cv2.GaussianBlur(gray1, dst=None, ksize=(3,3), sigmaX=5)
@@ -51,16 +51,6 @@ def compute_flow(frame1_path, frame2_path,                          #in origine
             poly_sigma=poly_sigma,
             flags=flow_flags
         )
-    """
-    flow = cv2.calcOpticalFlowFarneback(gray1, gray2, None,
-                                        pyr_scale=0.75,
-                                        levels=3,
-                                        winsize=5,
-                                        iterations=3,
-                                        poly_n=10,
-                                        poly_sigma=1.2,
-                                        flags=0)
-    """
     return flow
 
 def get_flow_viz(flow):
@@ -76,8 +66,8 @@ def get_flow_viz(flow):
 
     return rgb
 
-
-def get_motion_mask(flow_mag, motion_thresh=1, kernel=np.ones((7,7))):
+                                                              #7,7 senza np.uint8 in origine
+def get_motion_mask(flow_mag, motion_thresh=1, kernel=np.ones((5,5), np.uint8)):
     """ Obtains Detection Mask from Optical Flow Magnitude
         Inputs:
             flow_mag (array) Optical Flow magnitude
@@ -136,6 +126,7 @@ def get_detections_edit(frame1, frame2, motion_thresh=1, bbox_thresh=400, nms_th
 
 
 def check_detection(detections, contours):
+    """
     bounding_boxes = []
     for det, cont in zip(detections, contours):
         x,y,w,h = det
@@ -175,7 +166,18 @@ def check_detection(detections, contours):
             solidity > 0.5                     # contorno sufficientemente compatto
         ):
             bounding_boxes.append((x, y, w, h))
-
+    """
+    bounding_boxes = []
+    for det, cont in zip(detections, contours):
+        x,y,w,h = det
+        #print(cont)
+        area = cv2.contourArea(cont)
+        aspect_ratio = float(w) / h
+        perimeter = cv2.arcLength(cont, True)
+        circularity = (4 * np.pi * area) / (perimeter ** 2) if perimeter > 0 else 0
+        # Filter boxes based on conditions
+        if 0.2 < aspect_ratio < 1 and circularity > 0.05 and area > 1500:
+            bounding_boxes.append((x, y, w, h))
     return bounding_boxes
 
 
@@ -231,6 +233,6 @@ def main_with_optical_flow_edit(frames_dir, output_video, resize_height, reseize
 if __name__ == "__main__":
     output_video = "human-detection-optical-flow-edit-v2.avi"
     frames_dir="frames"
-    hight=768
-    width=1366
+    hight=480
+    width=512
     main_with_optical_flow_edit(frames_dir, output_video, hight, width)

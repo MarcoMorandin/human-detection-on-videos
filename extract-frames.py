@@ -2,8 +2,12 @@
 import cv2
 import os
 from tqdm import tqdm
+import shutil
+
 
 def extract_frames(video_path, output_dir, frame_per_second=1):
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     video = cv2.VideoCapture(video_path)
@@ -16,6 +20,8 @@ def extract_frames(video_path, output_dir, frame_per_second=1):
         
 
 def preprocess_frames(frames_dir, output_dir):
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     for frame in tqdm(os.listdir(frames_dir)):
@@ -27,7 +33,7 @@ def preprocess_frames(frames_dir, output_dir):
         
 if __name__ == "__main__":
     print("\nExtracting frames...\n")
-    extract_frames("video.mov", "frames", 15)
+    extract_frames("video_2.mov", "frames", 15)
     print("\n\nPreprocessing frames...\n")
     preprocess_frames("frames", "preprocessed-frames")
     
