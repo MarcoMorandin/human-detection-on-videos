@@ -1,10 +1,10 @@
 import cv2
-import os
+#import os
 from tqdm import tqdm
-import matplotlib.pyplot as plt
-import time
-import glob
+#import matplotlib.pyplot as plt
+import glob as gl
 import numpy as np
+from motion_detection_utils import *
 
 
 def load_grayscale_image(file_path):
@@ -19,7 +19,15 @@ def initialize_video_writer(output_path, fps, frame_size):
     fourcc = cv2.VideoWriter_fourcc(*"MJPG")
     return cv2.VideoWriter(output_path, fourcc, fps, frame_size)
 
-def compute_flow(frame1_path, frame2_path):
+def compute_flow(frame1_path, frame2_path,                          #in origine
+                 pyr_scale=0.5,    # recommended range: [0.3, 0.6]  0.75
+                 levels=4,        # recommended range: [3, 6]       3
+                 winsize=15,      # recommended range: [5, 21]      5
+                 iterations=3,    # recommended range: [3, 10]      3
+                 poly_n=7,        # recommended range: [5, 7]       10
+                 poly_sigma=1.5,  # recommended range: [1.1, 1.5]   1.2
+                 flow_flags=0):
+
     # convert to grayscale
     gray1=load_grayscale_image(frame1_path)
     gray2=load_grayscale_image(frame2_path)
@@ -33,7 +41,17 @@ def compute_flow(frame1_path, frame2_path):
     # blurr image
     gray1 = cv2.GaussianBlur(gray1, dst=None, ksize=(3,3), sigmaX=5)
     gray2 = cv2.GaussianBlur(gray2, dst=None, ksize=(3,3), sigmaX=5)
-
+    flow = cv2.calcOpticalFlowFarneback(
+            gray1, gray2, None,
+            pyr_scale=pyr_scale,
+            levels=levels,
+            winsize=winsize,
+            iterations=iterations,
+            poly_n=poly_n,
+            poly_sigma=poly_sigma,
+            flags=flow_flags
+        )
+    """
     flow = cv2.calcOpticalFlowFarneback(gray1, gray2, None,
                                         pyr_scale=0.75,
                                         levels=3,
@@ -42,6 +60,7 @@ def compute_flow(frame1_path, frame2_path):
                                         poly_n=10,
                                         poly_sigma=1.2,
                                         flags=0)
+    """
     return flow
 
 def get_flow_viz(flow):
@@ -76,82 +95,6 @@ def get_motion_mask(flow_mag, motion_thresh=1, kernel=np.ones((7,7))):
     return motion_mask
 
 
-def remove_contained_bboxes(boxes):
-    """ Removes all smaller boxes that are contained within larger boxes.
-        Requires bboxes to be soirted by area (score)
-        Inputs:
-            boxes - array bounding boxes sorted (descending) by area 
-                    [[x1,y1,x2,y2]]
-        Outputs:
-            keep - indexes of bounding boxes that are not entirely contained 
-                   in another box
-    """
-    check_array = np.array([True, True, False, False])
-    keep = list(range(0, len(boxes)))
-    for i in keep: # range(0, len(bboxes)):
-        for j in range(0, len(boxes)):
-            # check if box j is completely contained in box i
-            if np.all((np.array(boxes[j]) >= np.array(boxes[i])) == check_array):
-                try:
-                    keep.remove(j)
-                except ValueError:
-                    continue
-    return keep
-
-
-def non_max_suppression_edit(boxes, scores, contours, threshold=1e-1):
-    """
-    Perform non-max suppression on a set of bounding boxes 
-    and corresponding scores.
-    Inputs:
-        boxes: a list of bounding boxes in the format [xmin, ymin, xmax, ymax]
-        scores: a list of corresponding scores 
-        threshold: the IoU (intersection-over-union) threshold for merging bboxes
-    Outputs:
-        boxes - non-max suppressed boxes
-    """
-    for cont in contours:
-        cv2.contourArea(cont)
-
-    # Sort the boxes and contours by score in descending order
-    order_ind = np.argsort(scores)[::-1]
-    boxes = boxes[order_ind]
-    #contours=contours[order]
-    contours = [contours[i] for i in order_ind]
-
-    # Remove all contained bounding boxes and get ordered indices
-    order = remove_contained_bboxes(boxes)
-
-    # Filter boxes and contours based on `keep_indices`
-    #boxes = boxes[keep_indices]
-    #contours[keep_indices]
-    #contours = [contours[i] for i in keep_indices]
-
-    keep = []
-    #final_contours = []
-
-    while order:
-
-        i = order.pop(0)
-        keep.append(i)
-        for j in order:
-            # Calculate the IoU between the two boxes
-            intersection = max(0, min(boxes[i][2], boxes[j][2]) - max(boxes[i][0], boxes[j][0])) * \
-                           max(0, min(boxes[i][3], boxes[j][3]) - max(boxes[i][1], boxes[j][1]))
-            union = (boxes[i][2] - boxes[i][0]) * (boxes[i][3] - boxes[i][1]) + \
-                    (boxes[j][2] - boxes[j][0]) * (boxes[j][3] - boxes[j][1]) - intersection
-            iou = intersection / union
-
-            # Remove boxes with IoU greater than the threshold
-            if iou > threshold:
-                order.remove(j)
-
-    for i in keep:
-        cv2.contourArea(contours[i])
-
-    return boxes[keep], [contours[i] for i in keep]
-
-
 def get_detections_edit(frame1, frame2, motion_thresh=1, bbox_thresh=400, nms_thresh=0.1, mask_kernel=np.ones((7,7), dtype=np.uint8)):
 
     """ Main function to get detections via Frame Differencing
@@ -177,7 +120,6 @@ def get_detections_edit(frame1, frame2, motion_thresh=1, bbox_thresh=400, nms_th
     motion_mask = get_motion_mask(mag, motion_thresh=motion_thresh, kernel=mask_kernel)
 
     # get initially proposed detections from contours
-    #TODO: modificare questo metodo in modo che si possano prendere anche i contours
     detections, contours = get_contour_detections_edit(motion_mask, thresh=bbox_thresh)
 
     if len(detections) == 0:
@@ -188,51 +130,52 @@ def get_detections_edit(frame1, frame2, motion_thresh=1, bbox_thresh=400, nms_th
     scores = detections[:, -1]
 
     # perform Non-Maximal Supression on initial detections
+
     # TODO: verificare come vengono disegnati i rettangoli senza questo
     return non_max_suppression_edit(bboxes, scores, contours, threshold=nms_thresh)
-    #return non_max_suppression(bboxes, scores, threshold=nms_thresh)
 
-
-def get_contour_detections_edit(mask, thresh=400):
-    """ Obtains initial proposed detections from contours discoverd on the
-        mask. Scores are taken as the bbox area, larger is higher.
-        Inputs:
-            mask - thresholded image mask
-            thresh - threshold for contour size
-        Outputs:
-            detectons - array of proposed detection bounding boxes and scores 
-                        [[x1,y1,x2,y2,s]]
-        """
-    # get mask contours
-    contours, _ = cv2.findContours(mask, 
-                                   cv2.RETR_EXTERNAL, # cv2.RETR_TREE, 
-                                   cv2.CHAIN_APPROX_TC89_L1)
-    for cont in contours:
-        area=cv2.contourArea(cont)
-
-    detections = []
-    filtered_contours = []
-    for cnt in contours:
-        x,y,w,h = cv2.boundingRect(cnt)
-        area = w*h
-        if area > thresh: # hyperparameter
-            detections.append([x,y,x+w,y+h, area])
-            filtered_contours.append(cnt)
-
-    return np.array(detections), filtered_contours
 
 def check_detection(detections, contours):
     bounding_boxes = []
     for det, cont in zip(detections, contours):
         x,y,w,h = det
-        #print(cont)
-        area = cv2.contourArea(cont)
-        aspect_ratio = float(w) / h
-        perimeter = cv2.arcLength(cont, True)
+        # Evita divisioni per zero (ad esempio se h=0)
+        if h == 0 or w == 0:
+            continue
+        
+        area = cv2.contourArea(cont)            # Area del contorno
+        bbox_area = float(w * h)               # Area del bounding box
+        aspect_ratio = float(w) / (h + 1e-6)    # Rapporto larghezza / altezza
+        perimeter = cv2.arcLength(cont, True)  # Perimetro del contorno
+
+        # Circolarità: 1 indica un cerchio perfetto; valori più bassi forme più allungate
         circularity = (4 * np.pi * area) / (perimeter ** 2) if perimeter > 0 else 0
+
+        # Extent: area del contorno / area del bounding box
+        extent = area / bbox_area if bbox_area > 0 else 0
+
+        # Solidity: area del contorno / area dell'hull convesso
+        hull = cv2.convexHull(cont)
+        hull_area = cv2.contourArea(hull)
+        solidity = area / hull_area if hull_area > 0 else 0
+
+
         # Filter boxes based on conditions
-        if 0.2 < aspect_ratio < 1 and circularity > 0.05 and area > 1500:
+        # Filtri euristici per riconoscere persone:
+        # 1. Aspect ratio compreso in un range "umanoide"
+        # 2. Circolarità non troppo elevata (forme troppo circolari sono sospette)
+        # 3. Area minima sufficiente (filtra rumore e oggetti piccoli)
+        # 4. Extent in un range: se è troppo vicino a 1 indica contorni "pieni" (potrebbe essere un oggetto compatto)
+        # 5. Solidity in un range: se troppo bassa indica contorni molto frastagliati (spesso rumore)
+        if (
+            0.2 < aspect_ratio < 1.0 and        # persona in piedi: più alta che larga
+            0.05 < circularity < 0.5 and        # circolarità "intermedia"
+            area > 1500 and                    # area minima
+            0.2 < extent < 0.9 and             # contorno non troppo pieno / non troppo "vuoto"
+            solidity > 0.5                     # contorno sufficientemente compatto
+        ):
             bounding_boxes.append((x, y, w, h))
+
     return bounding_boxes
 
 
@@ -243,26 +186,14 @@ def draw_bboxes(frame, detections):
 
 
 def main_with_optical_flow_edit(frames_dir, output_video, resize_height, reseize_width):
-    #ref_frame_bg = load_grayscale_image(f"{frames_dir}/frame0.jpg")
-    #ref_frame_bg = cv2.resize(ref_frame_bg, (1366, 768) , interpolation= cv2.INTER_LINEAR)
-    prev_bounding_boxes = [[0,0,0,0]]
-
-   
+     
     out = initialize_video_writer(output_video, fps=15, frame_size=(reseize_width, resize_height))
 
-    #out = initialize_video_writer(output_video, fps=15, frame_size=(3420,1910))
-
-    # get variable motion thresh based on prior knowledge of camera position
-    #height, width = mag.shape[:2] 
-    #prima erano le dimensioni originali
+    prev_bounding_boxes = [[0,0,0,0]]
     motion_thresh = np.c_[np.linspace(0.3, 1, resize_height)].repeat(reseize_width, axis=-1)
-    #prima era 7 7
+    #in origine era 7 7
     kernel = np.ones((5,5), dtype=np.uint8)
-    #                                                   prima era len -1
-    #for i in tqdm(range(50, 749)):
-    for i in tqdm(range(1, len(glob.glob1(frames_dir, "*.jpg")))):
-        #frame = load_grayscale_image(f"{frames_dir}/frame{i}.jpg")
-        #frame = cv2.resize(frame, (1366, 768) , interpolation= cv2.INTER_LINEAR)
+    for i in tqdm(range(1, len(gl.glob1(frames_dir, "*.jpg")))):
         frame1_bgr_path=f"{frames_dir}/frame{i-1}.jpg"
         frame2_bgr_path=f"{frames_dir}/frame{i}.jpg"
 
@@ -277,15 +208,6 @@ def main_with_optical_flow_edit(frames_dir, output_video, resize_height, reseize
             continue
 
         if i % 10 == 0 or i == 1:
-            '''
-            # get detections
-            detections, contours = get_detections_edit(frame1_bgr_path, 
-                                frame2_bgr_path, 
-                                motion_thresh=motion_thresh, 
-                                bbox_thresh=400, 
-                                nms_thresh=0.1, 
-                                mask_kernel=kernel)
-            '''
             detections, contours = get_detections_edit(frame1_bgr_path, 
                                 frame2_bgr_path, 
                                 motion_thresh=motion_thresh, 
@@ -306,9 +228,9 @@ def main_with_optical_flow_edit(frames_dir, output_video, resize_height, reseize
 
     out.release()
 
-
-output_video = "human-detection-optical-flow-edit.avi"
-frames_dir="frames"
-hight=768
-width=1366
-main_with_optical_flow_edit(frames_dir, output_video, hight, width)
+if __name__ == "__main__":
+    output_video = "human-detection-optical-flow-edit-v2.avi"
+    frames_dir="frames"
+    hight=768
+    width=1366
+    main_with_optical_flow_edit(frames_dir, output_video, hight, width)

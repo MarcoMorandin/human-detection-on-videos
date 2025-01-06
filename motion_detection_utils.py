@@ -53,6 +53,9 @@ def get_contour_detections_edit(mask, thresh=400):
     contours, _ = cv2.findContours(mask, 
                                    cv2.RETR_EXTERNAL, # cv2.RETR_TREE, 
                                    cv2.CHAIN_APPROX_TC89_L1)
+    for cont in contours:
+        area=cv2.contourArea(cont)
+
     detections = []
     filtered_contours = []
     for cnt in contours:
@@ -139,19 +142,21 @@ def non_max_suppression_edit(boxes, scores, contours, threshold=1e-1):
     Outputs:
         boxes - non-max suppressed boxes
     """
+    for cont in contours:
+        cv2.contourArea(cont)
 
     # Sort the boxes and contours by score in descending order
-    order = np.argsort(scores)[::-1]
-    boxes = boxes[order]
-    contours=contours[order]
-    #contours = [contours[i] for i in order]
+    order_ind = np.argsort(scores)[::-1]
+    boxes = boxes[order_ind]
+    #contours=contours[order]
+    contours = [contours[i] for i in order_ind]
 
     # Remove all contained bounding boxes and get ordered indices
-    keep_indices = remove_contained_bboxes(boxes)
+    order = remove_contained_bboxes(boxes)
 
     # Filter boxes and contours based on `keep_indices`
-    boxes = boxes[keep_indices]
-    contours[keep_indices]
+    #boxes = boxes[keep_indices]
+    #contours[keep_indices]
     #contours = [contours[i] for i in keep_indices]
 
     keep = []
@@ -176,7 +181,7 @@ def non_max_suppression_edit(boxes, scores, contours, threshold=1e-1):
     for i in keep:
         cv2.contourArea(contours[i])
 
-    return boxes[keep], contours[keep]
+    return boxes[keep], [contours[i] for i in keep]
 
 
 # =============================================================================
@@ -187,7 +192,7 @@ def draw_bboxes(frame, detections):
         x1,y1,x2,y2 = det
         cv2.rectangle(frame, (x1,y1), (x2,y2), (0,255,0), 3)
 
-
+'''
 def get_color(number):
     """ Converts an integer number to a color """
     # change these however you want to
@@ -206,14 +211,14 @@ def plot_points(image, points, radius=3, color=(0,255,0)):
 
 
 def create_gif_from_images(save_path : str, image_path : str, ext : str, duration : int = 50) -> None:
-    ''' creates a GIF from a folder of images
+    """ creates a GIF from a folder of images
         Inputs:
             save_path - path to save GIF
             image_path - path where images are located
             ext - extension of the images
         Outputs:
             None
-    '''
+    """
     ext = ext.replace('.', '')
     image_paths = sorted(glob(os.path.join(image_path, f'*.{ext}')))
     image_paths.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))
@@ -221,4 +226,6 @@ def create_gif_from_images(save_path : str, image_path : str, ext : str, duratio
 
     pil_images[0].save(save_path, format='GIF', append_images=pil_images,
                        save_all=True, duration=duration, loop=0)
+
+'''
     

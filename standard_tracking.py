@@ -1,9 +1,8 @@
 import cv2
-import os
+#import os
 from tqdm import tqdm
-import matplotlib.pyplot as plt
-import time
-import glob
+#import matplotlib.pyplot as plt
+import glob as gl
 import numpy as np
 
 from motion_detection_utils import *
@@ -79,8 +78,6 @@ def get_motion_mask(flow_mag, motion_thresh=1, kernel=np.ones((7,7))):
 
 
 
-
-
 def get_detections(frame1, frame2, motion_thresh=1, bbox_thresh=400, nms_thresh=0.1, mask_kernel=np.ones((7,7), dtype=np.uint8)):
 
     """ Main function to get detections via Frame Differencing
@@ -106,9 +103,7 @@ def get_detections(frame1, frame2, motion_thresh=1, bbox_thresh=400, nms_thresh=
     motion_mask = get_motion_mask(mag, motion_thresh=motion_thresh, kernel=mask_kernel)
 
     # get initially proposed detections from contours
-    #TODO: modificare questo metodo in modo che si possano prendere anche i contours
     detections = get_contour_detections(motion_mask, thresh=bbox_thresh)
-    #SI POTREBBE PENSARE DI USARE IL get_contour_detections_adv
 
     if len(detections) == 0:
         return np.zeros((0, 5), dtype=np.float32)
@@ -123,26 +118,16 @@ def get_detections(frame1, frame2, motion_thresh=1, bbox_thresh=400, nms_thresh=
 
 
 def main_with_optical_flow(frames_dir, output_video, resize_height, reseize_width):
-    #ref_frame_bg = load_grayscale_image(f"{frames_dir}/frame0.jpg")
-    #ref_frame_bg = cv2.resize(ref_frame_bg, (1366, 768) , interpolation= cv2.INTER_LINEAR)
-    prev_bounding_boxes = [[0,0,0,0]]
-
-   
     out = initialize_video_writer(output_video, fps=15, frame_size=(reseize_width, resize_height))
 
-    #out = initialize_video_writer(output_video, fps=15, frame_size=(3420,1910))
-
-    # get variable motion thresh based on prior knowledge of camera position
-    #height, width = mag.shape[:2] 
-    #prima erano le dimensioni originali
+    prev_bounding_boxes = [[0,0,0,0]]
     motion_thresh = np.c_[np.linspace(0.3, 1, resize_height)].repeat(reseize_width, axis=-1)
-    #prima era 7 7
+
+    #in origine era 7 7
     kernel = np.ones((5,5), dtype=np.uint8)
-    #                                                   prima era len -1
-    #for i in tqdm(range(151, 250)):
-    for i in tqdm(range(1, len(glob.glob1(frames_dir, "*.jpg")))):
-        #frame = load_grayscale_image(f"{frames_dir}/frame{i}.jpg")
-        #frame = cv2.resize(frame, (1366, 768) , interpolation= cv2.INTER_LINEAR)
+
+    for i in tqdm(range(1, len(gl.glob1(frames_dir, "*.jpg")))):
+        
         frame1_bgr_path=f"{frames_dir}/frame{i-1}.jpg"
         frame2_bgr_path=f"{frames_dir}/frame{i}.jpg"
 
@@ -167,7 +152,6 @@ def main_with_optical_flow(frames_dir, output_video, resize_height, reseize_widt
 
         # draw bounding boxes on frame
         if detections.size!=0:
-            #detections=check_detection(detections)
             prev_bounding_boxes.append(detections)
             draw_bboxes(frame2_bgr, detections)
             prev_bounding_boxes.pop(0)
@@ -177,16 +161,12 @@ def main_with_optical_flow(frames_dir, output_video, resize_height, reseize_widt
 
     out.release()
 
-
-output_video = "human-detection-optical-flow.avi"
-frames_dir="frames"
-hight=768
-width=1366
-main_with_optical_flow(frames_dir, output_video, hight, width)
-
-
-
-
+if __name__ == "__main__":
+    output_video = "human-detection-optical-flow.avi"
+    frames_dir="frames"
+    hight=768
+    width=1366
+    main_with_optical_flow(frames_dir, output_video, hight, width)
 
 
 
@@ -223,8 +203,8 @@ def step1_and_step2(frame_1_path,frame_2_path):
 
 
 
-mask, ang= step1_and_step2("path1", "path_2")
-
+#mask, ang= step1_and_step2("path1", "path_2")
+ang="riga sopra"
 '''
 Idea alla base: each moving object will have corresponding pixels that move in the same 
 direction. So if we have a detection with flow angles that move in multiple directions 
