@@ -68,7 +68,7 @@ def get_flow_viz(flow):
     return rgb
 
 
-def get_motion_mask(flow_mag, motion_thresh=1, kernel=np.ones((5,5), np.uint8)):
+def get_motion_mask(flow_mag, motion_thresh=1, kernel=np.ones((9,), np.uint8)):
     """ Obtains Detection Mask from Optical Flow Magnitude
         Inputs:
             flow_mag (array) Optical Flow magnitude
@@ -146,8 +146,8 @@ def get_detections(frame1, frame2,
     scores = detections[:, -1]
     
     # --- Step E: Apply Non-Maximal Suppression ---
-    return non_max_suppression(bboxes, scores, threshold=nms_thresh)
-    #return merge_bounding_boxes(bboxes, scores, overlapThresh=nms_thresh )
+    #return non_max_suppression(bboxes, scores, threshold=nms_thresh)
+    return merge_bounding_boxes(bboxes, scores)
 
 ###############################
 # 2. EDGE-BASED REFINEMENT   #

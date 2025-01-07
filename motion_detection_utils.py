@@ -185,78 +185,66 @@ def non_max_suppression_edit(boxes, scores, contours, threshold=1e-1):
 
     return boxes[keep], [contours[i] for i in keep]
 
-
-def merge_bounding_boxes(boxes, scores, overlapThresh):
+def boxes_overlap_area(boxA, boxB):
     """
-    Unisce bounding box che si sovrappongono in modo significativo.
-    boxes: lista di tuple (x, y, w, h)
-    overlapThresh: soglia di overlap (0.5 = 50%)
+    Ritorna l'area di intersezione tra due box in formato (x1, y1, x2, y2).
+    Se i box non si sovrappongono, l'area sarà 0.
     """
+    xA = max(boxA[0], boxB[0])
+    yA = max(boxA[1], boxB[1])
+    xB = min(boxA[2], boxB[2])
+    yB = min(boxA[3], boxB[3])
 
-    #if len(boxes) == 0:
-    #    return []
-    
-    # Converto in (x1, y1, x2, y2)
-    # Sort the boxes by score in descending order
-    boxes = boxes[np.argsort(scores)[::-1]]
-    
-    rects = []
-    for (x, y, w, h) in boxes:
-        rects.append([x, y, x+w, y+h])
-    
-    rects = np.array(rects)
-    # Ordino in base alla coordinata x
-    pick = []
-    x1 = rects[:,0]
-    y1 = rects[:,1]
-    x2 = rects[:,2]
-    y2 = rects[:,3]
-    idxs = np.argsort(y2)  # ordino per la y massima (o x2, a piacere)
-    
-    while len(idxs) > 0:
-        last = len(idxs) - 1
-        i = idxs[last]
-        pick.append(i)
-        
-        suppress = [last]
-        for pos in range(0, last):
-            j = idxs[pos]
-            
-            # Calcolo overlap
-            xx1 = max(x1[i], x1[j])
-            yy1 = max(y1[i], y1[j])
-            xx2 = min(x2[i], x2[j])
-            yy2 = min(y2[i], y2[j])
-            
-            w = max(0, xx2 - xx1)
-            h = max(0, yy2 - yy1)
-            overlapArea = float(w * h)
-            
-            area1 = float((x2[i] - x1[i]) * (y2[i] - y1[i]))
-            area2 = float((x2[j] - x1[j]) * (y2[j] - y1[j]))
-            
-            #ratio = overlapArea / min(area1, area2)
-            ratio=area1+area2-overlapArea
-            #print(ratio)
-            # Se l'overlap supera la soglia, unisco i due box
-            if ratio > 1:
-                suppress.append(pos)
-                
-                # Unione effettiva: aggiorno la box “i” con i min e i max
-                x1[i] = min(x1[i], x1[j])
-                y1[i] = min(y1[i], y1[j])
-                x2[i] = max(x2[i], x2[j])
-                y2[i] = max(y2[i], y2[j])
-        
-        idxs = np.delete(idxs, suppress)
-    
-    # pick ora contiene gli indici dei box finali
-    merged = []
-    for i in pick:
-        merged.append((x1[i], y1[i], x2[i]-x1[i], y2[i]-y1[i]))
-    
-    return merged
+    inter_width = max(0, xB - xA)
+    inter_height = max(0, yB - yA)
+    return inter_width * inter_height
 
+def unify_boxes(boxA, boxB):
+    """
+    Restituisce il rettangolo "union" che copre entrambi i box
+    in formato (x1, y1, x2, y2).
+    """
+    x1 = min(boxA[0], boxB[0])
+    y1 = min(boxA[1], boxB[1])
+    x2 = max(boxA[2], boxB[2])
+    y2 = max(boxA[3], boxB[3])
+    return (x1, y1, x2, y2)
+
+
+
+def merge_bounding_boxes(boxes, scores):
+        """
+        Perform non-max suppression on a set of bounding boxes 
+        and corresponding scores.
+        Inputs:
+            boxes: a list of bounding boxes in the format [xmin, ymin, xmax, ymax]
+            scores: a list of corresponding scores 
+            threshold: the IoU (intersection-over-union) threshold for merging bboxes
+        Outputs:
+            boxes - non-max suppressed boxes
+        """
+        # Sort the boxes by score in descending order
+        boxes = boxes[np.argsort(scores)[::-1]]
+
+        # remove all contained bounding boxes and get ordered index
+        order = remove_contained_bboxes(boxes)
+
+        keep = []
+        while order:
+            i = order.pop(0)
+            keep.append(i)
+            for j in order:
+                intersection = max(0, min(boxes[i][2], boxes[j][2]) - max(boxes[i][0], boxes[j][0])) * \
+                           max(0, min(boxes[i][3], boxes[j][3]) - max(boxes[i][1], boxes[j][1]))
+
+                if intersection > 0:
+                    # Unisci i due box in uno
+                    unified = unify_boxes(boxes[i], boxes[j])
+                    boxes[i] = unified
+                    order.remove(j)
+                    
+                    
+        return boxes[keep]
 
 
 
