@@ -94,8 +94,8 @@ def remove_contained_bboxes(boxes):
                     continue
     return keep
 
-
-def non_max_suppression(boxes, scores, threshold=1e-1):
+                    
+def non_max_suppression(boxes, scores, threshold=1e-2):
     """
     Perform non-max suppression on a set of bounding boxes 
     and corresponding scores.
@@ -125,6 +125,7 @@ def non_max_suppression(boxes, scores, threshold=1e-1):
             iou = intersection / union
 
             # Remove boxes with IoU greater than the threshold
+            #print(iou)
             if iou > threshold:
                 order.remove(j)
                 
@@ -175,6 +176,7 @@ def non_max_suppression_edit(boxes, scores, contours, threshold=1e-1):
             iou = intersection / union
 
             # Remove boxes with IoU greater than the threshold
+            #print(iou)
             if iou > threshold:
                 order.remove(j)
 
@@ -182,6 +184,80 @@ def non_max_suppression_edit(boxes, scores, contours, threshold=1e-1):
         cv2.contourArea(contours[i])
 
     return boxes[keep], [contours[i] for i in keep]
+
+
+def merge_bounding_boxes(boxes, scores, overlapThresh):
+    """
+    Unisce bounding box che si sovrappongono in modo significativo.
+    boxes: lista di tuple (x, y, w, h)
+    overlapThresh: soglia di overlap (0.5 = 50%)
+    """
+
+    #if len(boxes) == 0:
+    #    return []
+    
+    # Converto in (x1, y1, x2, y2)
+    # Sort the boxes by score in descending order
+    boxes = boxes[np.argsort(scores)[::-1]]
+    
+    rects = []
+    for (x, y, w, h) in boxes:
+        rects.append([x, y, x+w, y+h])
+    
+    rects = np.array(rects)
+    # Ordino in base alla coordinata x
+    pick = []
+    x1 = rects[:,0]
+    y1 = rects[:,1]
+    x2 = rects[:,2]
+    y2 = rects[:,3]
+    idxs = np.argsort(y2)  # ordino per la y massima (o x2, a piacere)
+    
+    while len(idxs) > 0:
+        last = len(idxs) - 1
+        i = idxs[last]
+        pick.append(i)
+        
+        suppress = [last]
+        for pos in range(0, last):
+            j = idxs[pos]
+            
+            # Calcolo overlap
+            xx1 = max(x1[i], x1[j])
+            yy1 = max(y1[i], y1[j])
+            xx2 = min(x2[i], x2[j])
+            yy2 = min(y2[i], y2[j])
+            
+            w = max(0, xx2 - xx1)
+            h = max(0, yy2 - yy1)
+            overlapArea = float(w * h)
+            
+            area1 = float((x2[i] - x1[i]) * (y2[i] - y1[i]))
+            area2 = float((x2[j] - x1[j]) * (y2[j] - y1[j]))
+            
+            #ratio = overlapArea / min(area1, area2)
+            ratio=area1+area2-overlapArea
+            #print(ratio)
+            # Se l'overlap supera la soglia, unisco i due box
+            if ratio > 1:
+                suppress.append(pos)
+                
+                # Unione effettiva: aggiorno la box “i” con i min e i max
+                x1[i] = min(x1[i], x1[j])
+                y1[i] = min(y1[i], y1[j])
+                x2[i] = max(x2[i], x2[j])
+                y2[i] = max(y2[i], y2[j])
+        
+        idxs = np.delete(idxs, suppress)
+    
+    # pick ora contiene gli indici dei box finali
+    merged = []
+    for i in pick:
+        merged.append((x1[i], y1[i], x2[i]-x1[i], y2[i]-y1[i]))
+    
+    return merged
+
+
 
 
 # =============================================================================

@@ -209,7 +209,7 @@ def main_with_optical_flow_edit(frames_dir, output_video, resize_height, reseize
         if frame1_bgr is None or frame2_bgr is None:
             continue
 
-        if i % 10 == 0 or i == 1:
+        if i % 5 == 0 or i == 1:
             detections, contours = get_detections_edit(frame1_bgr_path, 
                                 frame2_bgr_path, 
                                 motion_thresh=motion_thresh, 
