@@ -213,6 +213,7 @@ def unify_boxes(boxA, boxB):
 
 
 def merge_bounding_boxes(boxes, scores):
+        #print("merge function")
         """
         Perform non-max suppression on a set of bounding boxes 
         and corresponding scores.
@@ -226,23 +227,25 @@ def merge_bounding_boxes(boxes, scores):
         # Sort the boxes by score in descending order
         boxes = boxes[np.argsort(scores)[::-1]]
 
-        # remove all contained bounding boxes and get ordered index
         order = remove_contained_bboxes(boxes)
-
+        
         keep = []
-        while order:
-            i = order.pop(0)
-            keep.append(i)
-            for j in order:
-                intersection = max(0, min(boxes[i][2], boxes[j][2]) - max(boxes[i][0], boxes[j][0])) * \
-                           max(0, min(boxes[i][3], boxes[j][3]) - max(boxes[i][1], boxes[j][1]))
-
-                if intersection > 0:
-                    # Unisci i due box in uno
-                    unified = unify_boxes(boxes[i], boxes[j])
-                    boxes[i] = unified
-                    order.remove(j)
-                    
+        changed = True
+        while changed:
+            changed = False
+            while order:
+                i = order.pop(0)
+                keep.append(i)
+                for j in order:
+                    intersection = max(0, min(boxes[i][2], boxes[j][2]) - max(boxes[i][0], boxes[j][0])) * \
+                            max(0, min(boxes[i][3], boxes[j][3]) - max(boxes[i][1], boxes[j][1]))
+                    #print(intersection)
+                    if intersection > 0:
+                        changed=True
+                        # Unisci i due box in uno
+                        unified = unify_boxes(boxes[i], boxes[j])
+                        boxes[i] = unified
+                        order.remove(j)
                     
         return boxes[keep]
 

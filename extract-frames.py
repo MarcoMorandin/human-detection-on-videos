@@ -33,7 +33,7 @@ def preprocess_frames(frames_dir, output_dir):
         
 if __name__ == "__main__":
     print("\nExtracting frames...\n")
-    extract_frames("video_2.mov", "frames", 15)
+    extract_frames("in.avi", "frames", 15)
     print("\n\nPreprocessing frames...\n")
     preprocess_frames("frames", "preprocessed-frames")
     

@@ -35,9 +35,9 @@ def compute_flow(frame1_path, frame2_path,                          #in origine
 
     #gray1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
     #gray2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
-
-    gray1 = cv2.resize(gray1, (512, 480) , interpolation= cv2.INTER_LINEAR)
-    gray2 = cv2.resize(gray2, (512, 480) , interpolation= cv2.INTER_LINEAR)
+    
+    gray1 = cv2.resize(gray1, (768, 576) , interpolation= cv2.INTER_LINEAR)
+    gray2 = cv2.resize(gray2, (768, 576) , interpolation= cv2.INTER_LINEAR)
 
     # blurr image
     gray1 = cv2.GaussianBlur(gray1, dst=None, ksize=(3,3), sigmaX=5)
@@ -54,6 +54,7 @@ def compute_flow(frame1_path, frame2_path,                          #in origine
         )
     return flow
 
+# USATO SOLO PER LA VISUALIZZAZIONE DURANTE LA FASE DI TEST
 def get_flow_viz(flow):
     """ Obtains BGR image to Visualize the Optical Flow 
         """
@@ -81,6 +82,8 @@ def get_motion_mask(flow_mag, motion_thresh=1, kernel=np.ones((9,), np.uint8)):
 
     motion_mask = cv2.erode(motion_mask, kernel, iterations=1)
     #motion_mask = cv2.morphologyEx(motion_mask, cv2.MORPH_OPEN, kernel, iterations=1)
+    #viene susato la MORPH_CLOSE con lo scopo di rimuovere piccoli spazi o buchi all'interno di oggetti e collegare componenti vicine.
+    #così se parti di una persona si muovono più di altre, questo cerca di unirle tutte
     motion_mask = cv2.morphologyEx(motion_mask, cv2.MORPH_CLOSE, kernel, iterations=4)
     
     return motion_mask
@@ -106,21 +109,25 @@ def get_detections(frame1, frame2,
     flow = compute_flow(frame1, frame2)
     #if flow is None:
     #    return np.zeros((0, 5), dtype=np.float32)
-
+    #restituisce l'intensità del movimento
     mag, _ = cv2.cartToPolar(flow[..., 0], flow[..., 1])
+
+    #filtra solo i movimenti significativi
     motion_mask = get_motion_mask(mag, motion_thresh=motion_thresh, kernel=mask_kernel)
 
     # --- Step B: Background Subtraction ---
-    #bgr_frame1 = cv2.imread(frame1)
+
     bgr_frame2 = cv2.imread(frame2)
     if bgr_frame2 is None:
         return np.zeros((0, 5), dtype=np.float32)
 
     # Convert to grayscale for edges & also apply BG subtractor
     gray_frame2 = cv2.cvtColor(bgr_frame2, cv2.COLOR_BGR2GRAY)
+    #individua background e foreground
     fg_mask = bg_subtractor.apply(bgr_frame2)  # foreground mask from BG subtractor
 
     # --- Step C: Edge Detection ---
+    #individua i bordi nel frame
     edge_mask = get_edge_mask(gray_frame2, low_thresh=50, high_thresh=150)
 
     # We combine the three masks (motion, background-subtracted, edge) to yield
@@ -162,6 +169,8 @@ def get_edge_mask(gray_frame, low_thresh=100, high_thresh=200):
     return edges
 
 
+#TODO: dato che individua solo alcune componenti di una persona (solo quelle in movimento)
+#       questo metodo non funziona bene ← vedere come fixarlo
 def check_detection(detections, contours):
     bounding_boxes = []
     for det, cont in zip(detections, contours):
@@ -224,8 +233,8 @@ def main_with_optical_flow(frames_dir, output_video, resize_height, reseize_widt
 if __name__ == "__main__":
     output_video = "human-detection-optical-flow-combined.avi"
     frames_dir="frames"
-    hight=480
-    width=512
+    hight=576
+    width=768
     bg_subtractor = cv2.createBackgroundSubtractorMOG2(
         history=200,            # number of frames for background accumulation
         varThreshold=50,        # threshold on squared Mahalanobis distance
