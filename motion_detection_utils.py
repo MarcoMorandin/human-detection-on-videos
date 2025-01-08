@@ -68,7 +68,6 @@ def get_contour_detections_edit(mask, thresh=400):
     return np.array(detections), filtered_contours
 
 
-
 # =============================================================================
 # Non-Max Supression for detected bounding boxes on blobs
 
@@ -94,6 +93,74 @@ def remove_contained_bboxes(boxes):
                     continue
     return keep
 
+
+def boxes_overlap_area(boxA, boxB):
+    """
+    Ritorna l'area di intersezione tra due box in formato (x1, y1, x2, y2).
+    Se i box non si sovrappongono, l'area sarà 0.
+    """
+    xA = max(boxA[0], boxB[0])
+    yA = max(boxA[1], boxB[1])
+    xB = min(boxA[2], boxB[2])
+    yB = min(boxA[3], boxB[3])
+
+    inter_width = max(0, xB - xA)
+    inter_height = max(0, yB - yA)
+    return inter_width * inter_height
+
+def unify_boxes(boxA, boxB):
+    """
+    Restituisce il rettangolo "union" che copre entrambi i box
+    in formato (x1, y1, x2, y2).
+    """
+    x1 = min(boxA[0], boxB[0])
+    y1 = min(boxA[1], boxB[1])
+    x2 = max(boxA[2], boxB[2])
+    y2 = max(boxA[3], boxB[3])
+    return (x1, y1, x2, y2)
+
+
+
+def merge_bounding_boxes(boxes):
+        #print("merge function")
+        """
+        Perform non-max suppression on a set of bounding boxes 
+        and corresponding scores.
+        Inputs:
+            boxes: a list of bounding boxes in the format [xmin, ymin, xmax, ymax]
+            scores: a list of corresponding scores 
+            threshold: the IoU (intersection-over-union) threshold for merging bboxes
+        Outputs:
+            boxes - non-max suppressed boxes
+        """
+        
+        order = remove_contained_bboxes(boxes)
+        keep = []
+        while order:
+            i = order.pop(0)
+            keep.append(i)
+            for j in order:
+                intersection = boxes_overlap_area(boxes[i], boxes[j])
+                if intersection > 0:
+                    # Unisci i due box in uno
+                    unified = unify_boxes(boxes[i], boxes[j])
+                    boxes[i] = unified
+                    order.remove(j)
+                    
+        return boxes[keep]
+
+
+def merge_bounding_boxes_while_loop(bboxes):
+    old_len = -1
+    # Continuiamo finché il numero di box cambia
+    while len(bboxes) != old_len:
+        old_len = len(bboxes)
+        bboxes = merge_bounding_boxes(bboxes, 0)
+    return bboxes
+        
+
+# ============================================================================
+# NON PIU' USATE
                     
 def non_max_suppression(boxes, scores, threshold=1e-2):
     """
@@ -185,69 +252,6 @@ def non_max_suppression_edit(boxes, scores, contours, threshold=1e-1):
 
     return boxes[keep], [contours[i] for i in keep]
 
-def boxes_overlap_area(boxA, boxB):
-    """
-    Ritorna l'area di intersezione tra due box in formato (x1, y1, x2, y2).
-    Se i box non si sovrappongono, l'area sarà 0.
-    """
-    xA = max(boxA[0], boxB[0])
-    yA = max(boxA[1], boxB[1])
-    xB = min(boxA[2], boxB[2])
-    yB = min(boxA[3], boxB[3])
-
-    inter_width = max(0, xB - xA)
-    inter_height = max(0, yB - yA)
-    return inter_width * inter_height
-
-def unify_boxes(boxA, boxB):
-    """
-    Restituisce il rettangolo "union" che copre entrambi i box
-    in formato (x1, y1, x2, y2).
-    """
-    x1 = min(boxA[0], boxB[0])
-    y1 = min(boxA[1], boxB[1])
-    x2 = max(boxA[2], boxB[2])
-    y2 = max(boxA[3], boxB[3])
-    return (x1, y1, x2, y2)
-
-
-
-def merge_bounding_boxes(boxes, scores):
-        #print("merge function")
-        """
-        Perform non-max suppression on a set of bounding boxes 
-        and corresponding scores.
-        Inputs:
-            boxes: a list of bounding boxes in the format [xmin, ymin, xmax, ymax]
-            scores: a list of corresponding scores 
-            threshold: the IoU (intersection-over-union) threshold for merging bboxes
-        Outputs:
-            boxes - non-max suppressed boxes
-        """
-        # Sort the boxes by score in descending order
-        boxes = boxes[np.argsort(scores)[::-1]]
-
-        order = remove_contained_bboxes(boxes)
-        
-        keep = []
-        changed = True
-        while changed:
-            changed = False
-            while order:
-                i = order.pop(0)
-                keep.append(i)
-                for j in order:
-                    intersection = max(0, min(boxes[i][2], boxes[j][2]) - max(boxes[i][0], boxes[j][0])) * \
-                            max(0, min(boxes[i][3], boxes[j][3]) - max(boxes[i][1], boxes[j][1]))
-                    #print(intersection)
-                    if intersection > 0:
-                        changed=True
-                        # Unisci i due box in uno
-                        unified = unify_boxes(boxes[i], boxes[j])
-                        boxes[i] = unified
-                        order.remove(j)
-                    
-        return boxes[keep]
 
 
 
@@ -258,41 +262,3 @@ def draw_bboxes(frame, detections):
     for det in detections:
         x1,y1,x2,y2 = det
         cv2.rectangle(frame, (x1,y1), (x2,y2), (0,255,0), 3)
-
-'''
-def get_color(number):
-    """ Converts an integer number to a color """
-    # change these however you want to
-    blue = int(number*30 % 256)
-    green = int(number*103 % 256)
-    red = int(number*50 % 256)
-
-    return red, blue, green
-
-
-def plot_points(image, points, radius=3, color=(0,255,0)):
-    for x,y in points:
-        cv2.circle(image, (int(x), int(y)), radius, color, thickness=-1)
-
-    return image
-
-
-def create_gif_from_images(save_path : str, image_path : str, ext : str, duration : int = 50) -> None:
-    """ creates a GIF from a folder of images
-        Inputs:
-            save_path - path to save GIF
-            image_path - path where images are located
-            ext - extension of the images
-        Outputs:
-            None
-    """
-    ext = ext.replace('.', '')
-    image_paths = sorted(glob(os.path.join(image_path, f'*.{ext}')))
-    image_paths.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))
-    pil_images = [Image.open(im_path) for im_path in image_paths]
-
-    pil_images[0].save(save_path, format='GIF', append_images=pil_images,
-                       save_all=True, duration=duration, loop=0)
-
-'''
-    

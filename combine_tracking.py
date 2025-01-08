@@ -35,9 +35,9 @@ def compute_flow(frame1_path, frame2_path,                          #in origine
 
     #gray1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
     #gray2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
-    
-    gray1 = cv2.resize(gray1, (768, 576) , interpolation= cv2.INTER_LINEAR)
-    gray2 = cv2.resize(gray2, (768, 576) , interpolation= cv2.INTER_LINEAR)
+
+    gray1 = cv2.resize(gray1, (512, 480) , interpolation= cv2.INTER_LINEAR)
+    gray2 = cv2.resize(gray2, (512, 480) , interpolation= cv2.INTER_LINEAR)
 
     # blurr image
     gray1 = cv2.GaussianBlur(gray1, dst=None, ksize=(3,3), sigmaX=5)
@@ -150,11 +150,12 @@ def get_detections(frame1, frame2,
         return np.zeros((0, 5), dtype=np.float32)
 
     bboxes = detections[:, :4]
-    scores = detections[:, -1]
+    #scores = detections[:, -1]
     
     # --- Step E: Apply Non-Maximal Suppression ---
     #return non_max_suppression(bboxes, scores, threshold=nms_thresh)
-    return merge_bounding_boxes(bboxes, scores)
+    #return merge_bounding_boxes(bboxes, scores)
+    return merge_bounding_boxes_while_loop(bboxes)
 
 ###############################
 # 2. EDGE-BASED REFINEMENT   #
@@ -217,6 +218,15 @@ def main_with_optical_flow(frames_dir, output_video, resize_height, reseize_widt
                                 bbox_thresh=400, 
                                 nms_thresh=0.1, 
                                 mask_kernel=kernel)
+        """  
+        if i==160:
+            print(detections)
+            bboxes = detections[:, :4]
+            scores = detections[:, -1]
+            print("---")
+            det=merge_bounding_boxes(bboxes, scores)
+            print(det)
+        """
 
         # draw bounding boxes on frame
         numpy_det=np.array(detections)
@@ -233,8 +243,8 @@ def main_with_optical_flow(frames_dir, output_video, resize_height, reseize_widt
 if __name__ == "__main__":
     output_video = "human-detection-optical-flow-combined.avi"
     frames_dir="frames"
-    hight=576
-    width=768
+    hight=480
+    width=512
     bg_subtractor = cv2.createBackgroundSubtractorMOG2(
         history=200,            # number of frames for background accumulation
         varThreshold=50,        # threshold on squared Mahalanobis distance
