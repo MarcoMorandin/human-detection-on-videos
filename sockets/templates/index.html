@@ -1,16 +1,38 @@
 <html>
 <head>
-    <title>Video Streaming Example</title>
+    <title>Human Detection</title>
     <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.0/socket.io.js"></script>
+    <script>
+        let socket = io();
+    </script>
+    <style>
+        button {
+            padding: 10px;
+            margin: 10px;
+            font-size: 20px;
+        }
+    </style>
 </head>
 <body>
-<img id="video-frame" src=""/>
+    <br>
+    <br>
+    <br>
+    <button onclick="socket.emit('message', 'in.avi')">Cam 1</button>
+    <button onclick="socket.emit('message', 'test2.mp4')">Cam 2</button>
+    <button onclick="socket.emit('message', 'test3.mp4')">Cam 3</button>
+    <br>
+    <br>
+    <br>
+    <img id="video-frame" src=""/>
+    <br>
+    <br>
+    <h1 id="detected">Detected People: </h1>
 <script type="text/javascript">
     (function () {
-        let socket = io();
+        
         let img = document.getElementById('video-frame');
 
-        socket.on('frame', function (frameData) {
+        socket.on('frame', (frameData) => {
             let byteArray = new Uint8Array(frameData);
             let binaryData = '';
             for (var i = 0; i < byteArray.length; i++) {
@@ -18,6 +40,11 @@
             }
             img.src = 'data:image/jpeg;base64,' + btoa(binaryData);
         });
+
+        socket.on('n-boxes', (data) => {
+            let detected = document.getElementById('detected');
+            detected.innerHTML = 'Detected People: ' + parseInt(data);
+        })
     })();
 </script>
 </body>

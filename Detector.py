@@ -22,7 +22,7 @@ class HumanDetector:
         frame = cv2.resize(frame, (1366, 768), interpolation=cv2.INTER_LINEAR)
         
         for x, y, w, h in bounding_boxes:
-            frame = cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 200), 2)
+            frame = cv2.rectangle(frame, (x , y), (x + w, y + h), (0, 0, 200), 2)
         return frame, bounding_boxes
     
     def _preprocess_frames(self, frame):
@@ -42,16 +42,32 @@ class HumanDetector:
         return contours
 
     def _get_bounding_boxes(self, contours, frame):
+        bounding_boxes_dimension = []
+        bounding_boxes_optical_flow = []
+        bounding_boxes_merged = []
         bounding_boxes = []
+        
         for cnt in contours:
             x, y, w, h = cv2.boundingRect(cnt)
             if self._is_valid_contour(cnt, w, h):
-                
-                crop = frame[max(0, y - 50):y + h + 50, max(0, x - 50):x + w + 50]
-                if crop.shape[0] > 0 and crop.shape[1] > 0:    
+                bounding_boxes_dimension.append((x, y, w, h))
+
+        #TODO riempire bounding_boxes_optical_flow con box che si muovono
+        #TODO filtrare bounding boxes contenuti in altri bounding boxes (per evitare duplicati) e aggiungerli a bounding_boxes_merged
+        for box in bounding_boxes_dimension:
+            bounding_boxes_merged.append(box)
+
+        
+        for x, y, w, h in bounding_boxes_merged:    
+            crop = frame[max(0, y - 50):y + h + 50, max(0, x - 50):x + w + 50]
+            if crop.shape[0] > 0 and crop.shape[1] > 0:    
+                if len(bounding_boxes_merged) < 10:  # Limit the number of detections in order to avoid fulling memory else appened without svm
                     humans = self.hog.detectMultiScale(crop)
                     if len(humans) > 0:
                         bounding_boxes.append((x, y, w, h))
+                else:
+                    bounding_boxes.append((x, y, w, h))
+                    
         return bounding_boxes
     
     @staticmethod
