@@ -181,6 +181,7 @@ class OpticalFlowTracking():
             if i % 4 == 0 or i == 1:
                 detections = self.get_detections(frame1, frame2, motion_thresh=1, bbox_thresh=400, kernel=kernel)
             """
+            
             if i % 4 == 0 or i == 1:
                 detections=self.single_step_bounding_boxes(f"{frames_dir}/frame{i-1}.jpg", frame2, kernel, resize_height, resize_width)
             # Draw bounding boxes

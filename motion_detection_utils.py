@@ -142,6 +142,7 @@ def merge_bounding_boxes(boxes, treshold=0):
         """
         
         order = remove_contained_bboxes(boxes)
+        #Se serve è possibile creare un contour a partire dei 4 valori delle box
         keep = []
         while order:
             i = order.pop(0)
@@ -157,6 +158,7 @@ def merge_bounding_boxes(boxes, treshold=0):
         return boxes[keep]
 
 
+
 def merge_bounding_boxes_while_loop(bboxes):
     old_len = -1
     # Continuiamo finché il numero di box cambia
@@ -165,22 +167,6 @@ def merge_bounding_boxes_while_loop(bboxes):
         bboxes = merge_bounding_boxes(bboxes)
     return bboxes
         
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 # ============================================================================
 # NON PIU' USATE
