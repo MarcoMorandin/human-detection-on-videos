@@ -25,11 +25,6 @@ class HumanDetector:
             frame = cv2.rectangle(frame, (x , y), (x + w, y + h), (0, 0, 200), 2)
         return frame, bounding_boxes
     
-    def _preprocess_frames(self, frame):
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        frame = cv2.resize(frame, (1366, 768), interpolation=cv2.INTER_LINEAR)
-        return frame
-    
     def _process_frame_differences(self, frame):
         mask = cv2.subtract(self.ref_frame_bg, frame)
         _, thresh = cv2.threshold(mask, 50, 255, cv2.THRESH_BINARY)
@@ -56,7 +51,6 @@ class HumanDetector:
         #TODO filtrare bounding boxes contenuti in altri bounding boxes (per evitare duplicati) e aggiungerli a bounding_boxes_merged
         for box in bounding_boxes_dimension:
             bounding_boxes_merged.append(box)
-
         
         for x, y, w, h in bounding_boxes_merged:    
             crop = frame[max(0, y - 50):y + h + 50, max(0, x - 50):x + w + 50]
@@ -69,6 +63,12 @@ class HumanDetector:
                     bounding_boxes.append((x, y, w, h))
                     
         return bounding_boxes
+    
+    @staticmethod
+    def _preprocess_frames(frame):
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        frame = cv2.resize(frame, (1366, 768), interpolation=cv2.INTER_LINEAR)
+        return frame
     
     @staticmethod
     def _is_valid_contour(contour, width, height):
