@@ -171,4 +171,4 @@ motion-detection-frames
 *.mp4
 bg-detection-frames
 test
-tracking_test
+combined_tracking_test
