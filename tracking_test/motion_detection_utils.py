@@ -128,7 +128,7 @@ def unify_boxes(boxA, boxB):
 
 
 
-def merge_bounding_boxes(boxes, treshold=0):
+def merge_bounding_boxes(boxes):
         #print("merge function")
         """
         Perform non-max suppression on a set of bounding boxes 
@@ -148,7 +148,7 @@ def merge_bounding_boxes(boxes, treshold=0):
             keep.append(i)
             for j in order:
                 intersection = boxes_overlap_area(boxes[i], boxes[j])
-                if intersection > treshold:
+                if intersection > 0:
                     # Unisci i due box in uno
                     unified = unify_boxes(boxes[i], boxes[j])
                     boxes[i] = unified

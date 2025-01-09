@@ -4,7 +4,7 @@ from tqdm import tqdm
 #import matplotlib.pyplot as plt
 import glob as gl
 import numpy as np
-
+import os
 from motion_detection_utils import *
 
 
@@ -36,8 +36,8 @@ def compute_flow(frame1_path, frame2_path,                          #in origine
     #gray1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
     #gray2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
 
-    gray1 = cv2.resize(gray1, (512, 480) , interpolation= cv2.INTER_LINEAR)
-    gray2 = cv2.resize(gray2, (512, 480) , interpolation= cv2.INTER_LINEAR)
+    gray1 = cv2.resize(gray1, (768, 576) , interpolation= cv2.INTER_LINEAR)
+    gray2 = cv2.resize(gray2, (768, 576) , interpolation= cv2.INTER_LINEAR)
 
     # blurr image
     gray1 = cv2.GaussianBlur(gray1, dst=None, ksize=(3,3), sigmaX=5)
@@ -119,11 +119,12 @@ def get_detections(frame1, frame2, motion_thresh=1, bbox_thresh=400, nms_thresh=
     
     # separate bboxes and scores
     bboxes = detections[:, :4]
-    scores = detections[:, -1]
+    #scores = detections[:, -1]
 
     # perform Non-Maximal Supression on initial detections
     # TODO: verificare come vengono disegnati i rettangoli senza questo
-    return non_max_suppression(bboxes, scores, threshold=nms_thresh)
+    #return non_max_suppression(bboxes, scores, threshold=nms_thresh)
+    return merge_bounding_boxes_while_loop(bboxes)
 
 
 def main_with_optical_flow(frames_dir, output_video, resize_height, reseize_width):
@@ -171,10 +172,10 @@ def main_with_optical_flow(frames_dir, output_video, resize_height, reseize_widt
     out.release()
 
 if __name__ == "__main__":
-    output_video = "human-detection-optical-flow.avi"
+    output_video = "human-detection-optical-flow-prova.avi"
     frames_dir="frames"
-    hight=480
-    width=512
+    hight=576
+    width=768
     main_with_optical_flow(frames_dir, output_video, hight, width)
 
 
