@@ -26,13 +26,13 @@ def video_stream(video = "in.avi"):
     fps = cap.get(cv2.CAP_PROP_FPS)
     if not cap.isOpened():
         print("Error: Could not open video file.")
-        return  # Handle this error gracefully
+        return
     
     humanDetector = None
     first_frame = True
 
     while cap.isOpened():
-        if thread_event.is_set():  # Check if task should stop
+        if thread_event.is_set():
             print("Stopping current video stream.")
             break
         
@@ -76,14 +76,10 @@ def handle_connect():
 def handle_message(data):
     global thread_event
     print(f"Message from client: {data}")
-    # Signal the current task to stop
     if not thread_event.is_set():
         thread_event.set()
-        time.sleep(1/10)  # Give the previous task time to stop
-    thread_event.clear()
-
-    # Start a new video stream
-    
+        time.sleep(1/10)
+    thread_event.clear()    
     socketio.start_background_task(video_stream, data)
 
 @socketio.on('disconnect')
