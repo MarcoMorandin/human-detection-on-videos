@@ -9,6 +9,7 @@ sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 
 from Detector import HumanDetector
+from OpticalFlowDetector import OpticalFlowTracking
 from threading import Event
 
 thread_event = Event()
@@ -30,7 +31,7 @@ def video_stream(video = "in.avi"):
     
     humanDetector = None
     first_frame = True
-
+    old_frame=None
     while cap.isOpened():
         if thread_event.is_set():
             print("Stopping current video stream.")
@@ -38,11 +39,11 @@ def video_stream(video = "in.avi"):
         
         if first_frame:
             first_frame = False
-            ret, frame = cap.read()
+            ret, old_frame = cap.read()
             if not ret:
                 print("Error: Could not read the first frame.")
-                
-            humanDetector = HumanDetector(frame)
+            humanDetector_opticalflow= OpticalFlowTracking()
+            humanDetector = HumanDetector(old_frame)
             continue
         
         ret, frame = cap.read()
@@ -52,13 +53,15 @@ def video_stream(video = "in.avi"):
             continue
             
         try:
-            frame_edited, boxes = humanDetector.detect_humans(frame)
+            boxes_of = humanDetector_opticalflow.detect_humans(old_frame, frame)
+            frame_edited, boxes = humanDetector.detect_humans(frame, boxes_of, overlap_boxes_treshold=0.7)
             socketio.emit('n-boxes', len(boxes))
             _, encoded_frame = cv2.imencode('.jpg', frame_edited)
             frame_data = encoded_frame.tobytes()
             socketio.emit('frame', frame_data)
         except Exception as e:
             print(f"Error during detection: {e}")
+        old_frame=frame
         time.sleep(1/fps)
     
     
