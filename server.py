@@ -1,16 +1,12 @@
 import cv2
 from flask import Flask, render_template, request
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
 from datetime import datetime
 import time
 import sys
-import os.path
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
-
 from Detector import HumanDetector
 from OpticalFlowDetector import OpticalFlowTracking
-from threading import Event, Thread
+from threading import Event
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins='*')
@@ -109,4 +105,4 @@ def handle_disconnect():
 
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
+    socketio.run(app, allow_unsafe_werkzeug=True)
