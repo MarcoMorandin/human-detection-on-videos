@@ -44,14 +44,15 @@ class HumanDetector:
         
         for cnt in contours:
             x, y, w, h = cv2.boundingRect(cnt)
-            if self._is_valid_contour(cnt, w, h):
+            if self._is_valid_box(w, h):
                 bounding_boxes_dimension.append([x, y, w+x, h+y])
 
         for box in bounding_boxes_dimension:
             bounding_boxes_merged.append(box)
 
         for box in bounding_boxes_optical_flow:
-            bounding_boxes_merged.append(box)     
+            if self._is_valid_box(box[2], box[3]):
+                bounding_boxes_merged.append(box)     
 
         merge_without_overlap_boxes=merge_bounding_boxes_while_loop(bounding_boxes_merged, treshold=overlap_boxes_treshold)
        
@@ -73,8 +74,10 @@ class HumanDetector:
         frame = cv2.resize(frame, (1366, 768), interpolation=cv2.INTER_LINEAR)
         return frame
     
+    
     @staticmethod
-    def _is_valid_contour(contour, width, height):
-        area = cv2.contourArea(contour)
+    def _is_valid_box(width, height):
+        area = width * height
         aspect_ratio = float(width) / height
         return 0.2 < aspect_ratio < 1 and area > 1500
+    
