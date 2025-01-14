@@ -18,7 +18,13 @@ def index():
     return render_template('index.html')
 
 def video_stream(sid):
-    cap = cv2.VideoCapture(clients[sid]["video"])
+    if(sid not in clients):
+        print(f"[{sid}] Error: Client not found.")
+        return
+    if("video" not in clients[sid]):
+        cap = cv2.VideoCapture("in.avi")    
+    else:
+        cap = cv2.VideoCapture(clients[sid]["video"])
     fps = cap.get(cv2.CAP_PROP_FPS)
     if not cap.isOpened():
         print(f"[{sid}] Error: Could not open video file.")
@@ -105,4 +111,4 @@ def handle_disconnect():
 
 
 if __name__ == '__main__':
-    socketio.run(app, allow_unsafe_werkzeug=True)
+    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
