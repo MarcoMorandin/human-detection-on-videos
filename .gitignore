@@ -166,8 +166,6 @@ frames
 preprocessed-frames
 blob-detection-output
 motion-detection-frames
-*.mov
-*.avi
-*.mp4
+
 bg-detection-frames
 test
