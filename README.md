@@ -74,3 +74,8 @@ docker compose up --build
 ```
 1. Access the web interface:
 - Open a web browser and navigate to `http://127.0.0.1:8080`
+  
+## Result example:
+Follows a short example of the obtained result:
+![Example of the obtained result](result_example.gif)
+
