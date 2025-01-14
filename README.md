@@ -1,5 +1,16 @@
-# Human Detection Video Stream System
+<p align='center'>
+    <h1 align="center">Human Detection Video Stream System</h1>
+    <p align="center">
+    Professor Rosani's Signal, Image and Video course project
+    </p>
+    <p align='center'>
+    Developed by:<br>
+    Arcangeli Lorenzo <br>
+    Morandin Marco <br>
+    </p>   
+</p>
 
+----------
 A real-time human detection system that processes video streams using a combination of optical flow tracking, image contouring and HOG-based human detection, served through a web interface.
 
 ## Features
