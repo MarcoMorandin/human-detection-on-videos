@@ -3,7 +3,6 @@ from flask import Flask, render_template, request
 from flask_socketio import SocketIO
 from datetime import datetime
 import time
-import sys
 from Detector import HumanDetector
 from OpticalFlowDetector import OpticalFlowTracking
 from threading import Event
@@ -78,10 +77,12 @@ def handle_connect():
     sid = request.sid
     print(f"[{sid}] Client connected at {datetime.now()}")
     clients[sid] = {
-        "thread": socketio.start_background_task(video_stream, sid),
+        "thread": None,
         "stop_event": Event(),
         "video": "in.avi"
     }
+    
+    clients[sid]["thread"] = socketio.start_background_task(video_stream, sid)
     
 @socketio.on('message')
 def handle_message(data):
@@ -96,7 +97,6 @@ def handle_message(data):
     clients[sid]["stop_event"].clear()
     clients[sid]["video"] = video
     clients[sid]["thread"] = socketio.start_background_task(video_stream, sid)
-    clients[sid]["thread"].start()
 
 @socketio.on('disconnect')
 def handle_disconnect():

@@ -1,7 +1,5 @@
 import cv2
-import os
 import numpy as np
-from tqdm import tqdm
 from utils.motion_detection_utils import *
 
 
