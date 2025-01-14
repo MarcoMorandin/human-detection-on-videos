@@ -37,10 +37,10 @@ class OpticalFlowTracking():
         frame1 = cv2.resize(frame1, (self.width, self.height), interpolation=cv2.INTER_LINEAR)
         frame2 = cv2.resize(frame2, (self.width, self.height), interpolation=cv2.INTER_LINEAR)
 
-        detections = self.get_detections(frame1, frame2, motion_thresh=1, combine_bboxes_thresh=combine_bboxes_thresh)
+        detections = self._get_detections(frame1, frame2, motion_thresh=1, combine_bboxes_thresh=combine_bboxes_thresh)
         return detections
 
-    def compute_flow(self, gray1, gray2, 
+    def _compute_flow(self, gray1, gray2, 
                     pyr_scale=0.5,    
                     levels=4,        
                     winsize=15,      
@@ -75,7 +75,7 @@ class OpticalFlowTracking():
         )
         return flow
 
-    def get_motion_mask(self, flow_mag, motion_thresh=1, kernel=np.ones((9,), np.uint8)):
+    def _get_motion_mask(self, flow_mag, motion_thresh=1, kernel=np.ones((9,), np.uint8)):
         """
         Obtain a motion mask based on the magnitude of optical flow vectors
 
@@ -94,7 +94,7 @@ class OpticalFlowTracking():
         return motion_mask
 
     
-    def get_edge_mask(self, gray_frame, low_thresh=100, high_thresh=200):
+    def _get_edge_mask(self, gray_frame, low_thresh=100, high_thresh=200):
         """
         Perform Canny edge detection on a grayscale frame. Used to reduce false 
         positives in detections
@@ -109,7 +109,7 @@ class OpticalFlowTracking():
         """
         return cv2.Canny(gray_frame, threshold1=low_thresh, threshold2=high_thresh)
         
-    def get_optical_flow_mask(self, frame1, frame2, motion_thresh):
+    def _get_optical_flow_mask(self, frame1, frame2, motion_thresh):
         """
         Generate a binary motion mask using optical flow
 
@@ -121,12 +121,12 @@ class OpticalFlowTracking():
         Returns:
             Binary motion mask based on optical flow magnitude
         """
-        flow = self.compute_flow(frame1, frame2)
+        flow = self._compute_flow(frame1, frame2)
         mag, _ = cv2.cartToPolar(flow[..., 0], flow[..., 1])
         # Filter only relevant movement
-        return self.get_motion_mask(mag, motion_thresh, self.kernel)
+        return self._get_motion_mask(mag, motion_thresh, self.kernel)
 
-    def get_background_subtraction_mask(self, frame):
+    def _get_background_subtraction_mask(self, frame):
         """
         Generate a foreground mask using background subtraction
 
@@ -142,7 +142,7 @@ class OpticalFlowTracking():
         return fg_mask, gray_frame
 
 
-    def get_final_mask(self, optical_flow_mask, fg_mask, edge_mask):
+    def _get_final_mask(self, optical_flow_mask, fg_mask, edge_mask):
         """
         Combine motion, background subtraction, and edge masks into a final detection mask
 
@@ -164,7 +164,7 @@ class OpticalFlowTracking():
         return np.uint8(combined_mask > 0) * 255
 
 
-    def check_validity(self, detections):
+    def _check_validity(self, detections):
         """
         Validate the detected bounding boxes to ensure the proportions of a person is respected
 
@@ -182,7 +182,7 @@ class OpticalFlowTracking():
                 keep.append(i)
         return detections[keep]
         
-    def get_detections(self, frame1, frame2,
+    def _get_detections(self, frame1, frame2,
                        motion_thresh=1,
                        combine_bboxes_thresh=0.1):
         
@@ -203,16 +203,16 @@ class OpticalFlowTracking():
         gray2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
 
         # Compute optical flow and motion mask
-        optical_flow_mask=self.get_optical_flow_mask(gray1, gray2, motion_thresh)
+        optical_flow_mask=self._get_optical_flow_mask(gray1, gray2, motion_thresh)
 
         # Background subtraction
-        fg_mask, gray_frame2 = self.get_background_subtraction_mask(frame2)
+        fg_mask, gray_frame2 = self._get_background_subtraction_mask(frame2)
 
         #edge detection
-        edge_mask = self.get_edge_mask(gray_frame2, low_thresh=50, high_thresh=150)
+        edge_mask = self._get_edge_mask(gray_frame2, low_thresh=50, high_thresh=150)
 
         # Combined mask
-        final_mask = self.get_final_mask(optical_flow_mask, fg_mask, edge_mask)
+        final_mask = self._get_final_mask(optical_flow_mask, fg_mask, edge_mask)
 
         # Detect contours and bounding boxes
         detections = get_contour_detections(final_mask)
@@ -222,4 +222,4 @@ class OpticalFlowTracking():
         bboxes = detections[:, :4]
         bboxes = merge_bounding_boxes_while_loop(bboxes,combine_bboxes_thresh, check_validity=True)
 
-        return self.check_validity(bboxes)
+        return self._check_validity(bboxes)
