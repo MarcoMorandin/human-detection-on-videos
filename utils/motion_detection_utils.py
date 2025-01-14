@@ -1,45 +1,39 @@
 import numpy as np
 import cv2
 
-# =============================================================================
-# get bounding box detections from blobs/contours
 
-def get_contour_detections(mask, thresh=400):
-    """ Obtains initial proposed detections from contours discoverd on the
-        mask. Scores are taken as the bbox area, larger is higher.
-        Inputs:
-            mask - thresholded image mask
-            thresh - threshold for contour size
-        Outputs:
-            detectons - array of proposed detection bounding boxes and scores 
-                        [[x1,y1,x2,y2,s]]
-        """
+def get_contour_detections(mask):
+    """ 
+        Obtains detections from contours discoverd on the  mask. 
+        
+        Parameters:
+            mask: Binary mask of a frame
+
+        Returns:
+            detections: Array of bounding boxes
+    """
     # get mask contours
     contours, _ = cv2.findContours(mask, 
-                                   cv2.RETR_EXTERNAL, # cv2.RETR_TREE, 
+                                   cv2.RETR_EXTERNAL,  
                                    cv2.CHAIN_APPROX_TC89_L1)
     detections = []
     for cnt in contours:
         x,y,w,h = cv2.boundingRect(cnt)
-        area = w*h
-        if area > thresh: # hyperparameter
-            #detections.append([x,y,w,h, area])
-            detections.append([x,y,w+x,h+y, area])
+        detections.append([x,y,w+x,h+y])
             
-    #return detections
     return np.array(detections)
-
-
-
-# =============================================================================
-# Merge bounding boxes
-
 
 
 def boxes_overlap_area(boxA, boxB):
     """
-    Ritorna l'area di intersezione tra due box in formato (x1, y1, x2, y2).
-    Se i box non si sovrappongono, l'area sarà 0.
+    Compute the intersecation area of two bounding boxes
+
+    Parameters:
+        boxA: First bounding box
+        boxB: Second bounding box
+
+    Returns:
+        IoU: Intersection over Union of the two boxes
     """
     xA = max(boxA[0], boxB[0])
     yA = max(boxA[1], boxB[1])
@@ -48,21 +42,29 @@ def boxes_overlap_area(boxA, boxB):
 
     inter_width = max(0, xB - xA)
     inter_height = max(0, yB - yA)
+
     inter_area = inter_width * inter_height
 
-    # Calcola le aree dei due bounding boxes
+    # Compute the area of the two bounding boxes
     area_boxA = (boxA[2] - boxA[0]) * (boxA[3] - boxA[1])
     area_boxB = (boxB[2] - boxB[0]) * (boxB[3] - boxB[1])
 
-    # Calcola l'area dell'unione
+    # Comput union area
     union_area = area_boxA + area_boxB - inter_area
 
+    #compute Intersecation over Union
     return inter_area / union_area
 
 def unify_boxes(boxA, boxB):
     """
-    Restituisce il rettangolo "union" che copre entrambi i box
-    in formato (x1, y1, x2, y2).
+    Merge two bounding boxes into one
+
+    Parameters:
+        boxA: First bounding box
+        boxB: Second bounding box
+
+    Returns:
+        Unified bounding box
     """
     x1 = min(boxA[0], boxB[0])
     y1 = min(boxA[1], boxB[1])
@@ -73,18 +75,18 @@ def unify_boxes(boxA, boxB):
 
 
 def remove_contained_bboxes(boxes):
-    """ Removes all smaller boxes that are contained within larger boxes.
-        Requires bboxes to be soirted by area (score)
-        Inputs:
-            boxes - array bounding boxes sorted (descending) by area 
-                    [[x1,y1,x2,y2]]
-        Outputs:
-            keep - indexes of bounding boxes that are not entirely contained 
-                   in another box
+    """
+    Remove smaller bounding boxes that are completely contained within larger boxes
+
+    Parameters:
+        boxes: List of bounding boxes
+
+    Returns:
+        List of indices of the remaining bounding boxes
     """
     check_array = np.array([True, True, False, False])
     keep = list(range(0, len(boxes)))
-    for i in keep: # range(0, len(bboxes)):
+    for i in keep:
         for j in range(0, len(boxes)):
             # check if box j is completely contained in box i
             if np.all((np.array(boxes[j]) >= np.array(boxes[i])) == check_array):
@@ -95,83 +97,87 @@ def remove_contained_bboxes(boxes):
     return keep
 
 
-def check(x, y, w, h):
-    cnt = np.array([
-            [[x, y]],  # Vertice in alto a sinistra
-            [[w, y]],  # Vertice in alto a destra
-            [[w, h]],  # Vertice in basso a destra
-            [[x, h]]   # Vertice in basso a sinistra
-            ], dtype=np.int32)
-    area = cv2.contourArea(cnt)
-    aspect_ratio = float(w) / h
-    perimeter = cv2.arcLength(cnt, True)
-    circularity = (4 * np.pi * area) / (perimeter ** 2) if perimeter > 0 else 0
-    if 1.5 <= aspect_ratio <= 4 and 2000 <= area and 0.56 <= circularity <= 0.8:
-        return True
-    return False
+def merge_bounding_boxes(boxes,treshold ,need_check_validity=False):
+    """
+    Merge overlapping bounding boxes above a certain IoU threshold.
+    If need_check_validity = True it also checks if the merged bounding 
+    boxes still contains a person
 
+    Parameters:
+        boxes: List of bounding boxes
+        threshold: IoU threshold for merging boxes
+        need_check_validity: If check the unified bounding box need to be checked
 
-def merge_bounding_boxes(boxes, need_check_validity, treshold=1):
-        #print("merge function")
-        """
-        Perform non-max suppression on a set of bounding boxes 
-        and corresponding scores.
-        Inputs:
-            boxes: a list of bounding boxes in the format [xmin, ymin, xmax, ymax]
-            scores: a list of corresponding scores 
-            threshold: the IoU (intersection-over-union) threshold for merging bboxes
-        Outputs:
-            boxes - non-max suppressed boxes
-        """
-        
-        order = remove_contained_bboxes(boxes)
-        boxes=np.array(boxes)
-        #return boxes[order]
-        
-        #order = list(range(0, len(boxes)))
-        #Se serve è possibile creare un contour a partire dei 4 valori delle box
-        keep = []
-        while order:
-            i = order.pop(0)
-            keep.append(i)
-            for j in order:
-                intersection = boxes_overlap_area(boxes[i], boxes[j])
-                if intersection > treshold:
-                    # Unisci i due box in uno
-                    unified = unify_boxes(boxes[i], boxes[j])
-                    if need_check_validity:
-                        if check(unified[0], unified[1], unified[2], unified[3]):
-                            boxes[i] = unified
-                            order.remove(j)
-                    else:
+    Returns:
+        Updated list of bounding boxes
+    """
+    order = remove_contained_bboxes(boxes)
+    boxes=np.array(boxes)
+    keep = []
+    while order:
+        i = order.pop(0)
+        keep.append(i)
+        for j in order:
+            intersection = boxes_overlap_area(boxes[i], boxes[j])
+            if intersection > treshold:
+                # If intersecation over treshold, unify the boxes
+                unified = unify_boxes(boxes[i], boxes[j])
+                # Used to avoid false positive
+                if need_check_validity:
+                    if is_valid_box(unified[2], unified[3]):
                         boxes[i] = unified
                         order.remove(j)
-        return boxes[keep]
+                else:
+                    boxes[i] = unified
+                    order.remove(j)
+    return boxes[keep]
 
 
-def merge_bounding_boxes_while_loop(bboxes, check_validity=False, treshold=1):
-    #print(bboxes)
+def merge_bounding_boxes_while_loop(bboxes, treshold, check_validity=False):
+    """
+    Iteratively merge bounding boxes until no further merges are possible.
+
+    Parameters:
+        bboxes: List of bounding boxes
+        threshold: IoU threshold for merging boxes
+        check_validity: Whether to validate the unified box
+
+    Returns:
+        Final list of merged bounding boxes
+    """
     old_len = -1
-    # Continuiamo finché il numero di box cambia
+    # Continue to merge until no more boxes are merged (len of previous and current boxes are equal)
     while len(bboxes) != old_len:
         old_len = len(bboxes)
-        bboxes = merge_bounding_boxes(bboxes, check_validity, treshold)
+        bboxes = merge_bounding_boxes(bboxes, treshold, check_validity)
     return bboxes
-        
 
 
-# ============================================================================
-# initialize video ← DA ELIMINARE
+def preprocess_frames(frame):
+    """
+    Preprocess a frame by converting it to grayscale and resizing
 
-def initialize_video_writer(output_path, fps, frame_size):
-    fourcc = cv2.VideoWriter_fourcc(*"MJPG")
-    return cv2.VideoWriter(output_path, fourcc, fps, frame_size)
+    Parameters:
+        frame: Input frame
 
+    Returns:
+        Processed frame
+    """
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    frame = cv2.resize(frame, (1366, 768), interpolation=cv2.INTER_LINEAR)
+    return frame
 
-# =============================================================================
-# plot/display utils
+def is_valid_box(width, height):
+    """
+    Validate a bounding box contains a person
 
-def draw_bboxes(frame, detections):
-    for det in detections:
-        x1,y1,x2,y2 = det
-        cv2.rectangle(frame, (x1,y1), (x2,y2), (0,255,), 2)
+    Parameters:
+        width: Width of the bounding box
+        height: Height of the bounding box
+
+    Returns:
+        True if the bounding box is valid, False otherwise.
+    """
+    area = width * height
+    aspect_ratio = float(width) / height
+    return 0.2 < aspect_ratio < 1 and area > 1500

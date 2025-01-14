@@ -79,7 +79,7 @@ def handle_connect():
     clients[sid] = {
         "thread": None,
         "stop_event": Event(),
-        "video": "in.avi"
+        "video": "video/in.avi"
     }
     
     clients[sid]["thread"] = socketio.start_background_task(video_stream, sid)
@@ -95,7 +95,7 @@ def handle_message(data):
         clients[sid]["thread"].join()
 
     clients[sid]["stop_event"].clear()
-    clients[sid]["video"] = video
+    clients[sid]["video"] = "video/"+video
     clients[sid]["thread"] = socketio.start_background_task(video_stream, sid)
 
 @socketio.on('disconnect')

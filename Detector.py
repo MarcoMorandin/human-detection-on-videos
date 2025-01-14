@@ -5,7 +5,7 @@ from utils.motion_detection_utils import *
 
 class HumanDetector:
     def __init__(self, backgound_frame=None):
-        self.ref_frame_bg = self._preprocess_frames(backgound_frame)
+        self.ref_frame_bg = preprocess_frames(backgound_frame)
         self.frames_dir = "frames"
         self.preprocess_frames_dir = "preprocessed-frames"
         self.hog = cv2.HOGDescriptor()
@@ -13,7 +13,7 @@ class HumanDetector:
     
     def detect_humans(self, frame, bounding_boxes_optical_flow, overlap_boxes_treshold=0.7):
 
-        frame_preprocessed = self._preprocess_frames(frame)
+        frame_preprocessed = preprocess_frames(frame)
 
         contours = self._process_frame_differences(frame_preprocessed)
         bounding_boxes = self._get_bounding_boxes(contours, frame_preprocessed, bounding_boxes_optical_flow, overlap_boxes_treshold=overlap_boxes_treshold)
@@ -42,15 +42,14 @@ class HumanDetector:
         
         for cnt in contours:
             x, y, w, h = cv2.boundingRect(cnt)
-            if self._is_valid_box(w, h):
+            if is_valid_box(w, h):
                 bounding_boxes_dimension.append([x, y, w+x, h+y])
 
         for box in bounding_boxes_dimension:
             bounding_boxes_merged.append(box)
 
         for box in bounding_boxes_optical_flow:
-            if self._is_valid_box(box[2], box[3]):
-                bounding_boxes_merged.append(box)     
+            bounding_boxes_merged.append(box)     
 
         merge_without_overlap_boxes=merge_bounding_boxes_while_loop(bounding_boxes_merged, treshold=overlap_boxes_treshold)
        
@@ -64,18 +63,5 @@ class HumanDetector:
                 else:
                     bounding_boxes.append((x, y, w, h))
         return bounding_boxes
-        
-
-    @staticmethod
-    def _preprocess_frames(frame):
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        frame = cv2.resize(frame, (1366, 768), interpolation=cv2.INTER_LINEAR)
-        return frame
     
-    
-    @staticmethod
-    def _is_valid_box(width, height):
-        area = width * height
-        aspect_ratio = float(width) / height
-        return 0.2 < aspect_ratio < 1 and area > 1500
     
